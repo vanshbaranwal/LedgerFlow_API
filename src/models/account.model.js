@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const ledgerModel = require("./ledger.model.js");
+import mongoose from "mongoose";
+import ledgerModel from "./ledger.model.js";
 
 
 const accountSchema = new mongoose.Schema({
@@ -88,4 +88,4 @@ accountSchema.methods.getBalance = async function(session = null){
 
 const accountModel = mongoose.model("account", accountSchema);
 
-module.exports = accountModel;
+export default accountModel;

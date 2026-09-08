@@ -1,7 +1,7 @@
-const userModel = require("../models/user.model.js");
-const tokenBlackListModel = require("../models/blackList.model.js");
-const emailService = require("../services/email.service.js");
-const jwt = require("jsonwebtoken");
+import userModel from "../models/user.model.js";
+import tokenBlackListModel from "../models/blackList.model.js";
+import emailService from "../services/email.service.js";
+import jwt from "jsonwebtoken";
 
 
 
@@ -96,7 +96,7 @@ async function userLogoutController(req, res){
 
 
 
-module.exports = {
+export default {
     userRegisterController,
     userLoginController,
     userLogoutController

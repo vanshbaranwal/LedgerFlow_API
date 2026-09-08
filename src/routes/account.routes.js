@@ -1,6 +1,6 @@
-const express = require("express");
-const authMiddleware = require("../middleware/auth.middleware.js");
-const accountController = require("../controllers/account.controller.js");
+import express from "express";
+import authMiddleware from "../middleware/auth.middleware.js";
+import accountController from "../controllers/account.controller.js";
 
 const router = express.Router();
 
@@ -12,4 +12,4 @@ router.get("/", authMiddleware.authMiddleware, accountController.getUserAccounts
 
 router.get("/balance/:accountId", authMiddleware.authMiddleware, accountController.getAccountBalanceController);
 
-module.exports = router;
+export default router;

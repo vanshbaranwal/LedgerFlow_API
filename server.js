@@ -1,7 +1,7 @@
-require("dotenv").config();
+import "dotenv/config";
 
-const app = require("./src/app.js");
-const connectToDB = require("./src/config/db.js");
+import app from "./src/app.js";
+import connectToDB from "./src/config/db.js";
 
 
 connectToDB();

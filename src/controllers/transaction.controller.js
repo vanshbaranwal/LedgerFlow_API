@@ -1,8 +1,8 @@
-const ledgerModel = require("../models/ledger.model.js");
-const emailService = require("../services/email.service.js");
-const mongoose = require("mongoose");
-const transactionModel = require("../models/transaction.model.js");
-const accountModel = require("../models/account.model.js");
+import ledgerModel from "../models/ledger.model.js";
+import emailService from "../services/email.service.js";
+import mongoose from "mongoose";
+import transactionModel from "../models/transaction.model.js";
+import accountModel from "../models/account.model.js";
 
 // create a new transaction
 /*
@@ -265,7 +265,7 @@ async function createInitialFundsTransaction(req, res){
 };
 
 
-module.exports = {
+export default {
     createTransaction,
     createInitialFundsTransaction
 };
