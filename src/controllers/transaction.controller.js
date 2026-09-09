@@ -27,11 +27,37 @@ async function createTransaction(req, res){
     
     const { fromAccount, toAccount, amount, idempotencyKey } = req.body;
 
-    if(!fromAccount || !toAccount || !amount || !idempotencyKey){
+    if(fromAccount == null || toAccount == null || amount == null || idempotencyKey == null){
         return res.status(400).json({
             message: "fromAccount, toAccount, amount and idempotencyKey are required"
         });
     }
+
+    if(!mongoose.Types.ObjectId.isValid(fromAccount) || !mongoose.Types.ObjectId.isValid(toAccount)){
+        return res.status(400).json({
+            message: "fromAccount and toAccount must be a valid account ids"
+        });
+    }
+
+    if(typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0){
+        return res.status(400).json({
+            message: "amount must be a positive finite number"
+        });
+    }
+
+    if(fromAccount === toAccount){
+        return res.status(400).json({
+            message: "source and destination account must be different"
+        });
+    }
+
+    if(typeof idempotencyKey !== "string" || idempotencyKey.trim().length === 0 || idempotencyKey.trim().length > 128){
+        return res.status(400).json({
+            message: "idempotency must be a non empty string of at most 128 characters"
+        });
+    }
+
+    const normalizedIdempotencyKey = idempotencyKey.trim();
 
     const fromUserAccount = await accountModel.findOne({
         _id: fromAccount,
@@ -54,11 +80,16 @@ async function createTransaction(req, res){
         });
     }
 
-    
+    if(fromAccount.currency !== toUserAccount.currency){
+        return res.status(400).json({
+            message: "source and destination account currencies must be same"
+        });
+    }
+
     // 2. validate idempotecyKey (we use idempotency key so that the same payment should now be occuring two times)
 
     const isTransactionAlreadyExists = await transactionModel.findOne({
-        idempotencyKey: idempotencyKey
+        idempotencyKey: normalizedIdempotencyKey
     });
 
     if(isTransactionAlreadyExists){
@@ -89,12 +120,12 @@ async function createTransaction(req, res){
     }
 
 
-    // 3. check account status
+    // 3. check account status --> (already validated inside withTransaction inside activeToAccount variable)
 
-    if(fromUserAccount.status !== "ACTIVE" || toUserAccount.status !== "ACTIVE"){
-        return res.status(400).json({
-            message: "both fromAccount and toAccount must be ACTIVE to process transaction",
-        });    
+    // if(fromUserAccount.status !== "ACTIVE" || toUserAccount.status !== "ACTIVE"){
+    //     return res.status(400).json({
+    //         message: "both fromAccount and toAccount must be ACTIVE to process transaction",
+    //     });    
     }
     
     const session = await mongoose.startSession();
@@ -124,6 +155,19 @@ async function createTransaction(req, res){
                 throw error;
             }
             
+            const activeToAccount = await accountModel.findOne({
+                _id: toAccount,
+                status: "ACTIVE"
+            }).session(session);
+
+            if(!activeToAccount){
+                const error = new Error("destination account not found or is not ACTIVE");
+
+                error.statusCode = 404;
+                throw error;
+            }
+
+
             // 4. derive sender balance from ledger (using aggregation pipeline)
             const balance = await lockedFromAccount.getBalance(session);
 
@@ -139,7 +183,7 @@ async function createTransaction(req, res){
                 fromAccount,
                 toAccount,
                 amount,
-                idempotencyKey,
+                idempotencyKey: normalizedIdempotencyKey,
                 status: "PENDING"
             }], { session });
         
