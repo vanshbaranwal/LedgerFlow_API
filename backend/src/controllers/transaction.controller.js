@@ -80,12 +80,6 @@ async function createTransaction(req, res){
         });
     }
 
-    if(fromAccount.currency !== toUserAccount.currency){
-        return res.status(400).json({
-            message: "source and destination account currencies must be same"
-        });
-    }
-
     // 2. validate idempotecyKey (we use idempotency key so that the same payment should now be occuring two times)
 
     const isTransactionAlreadyExists = await transactionModel.findOne({
@@ -120,13 +114,7 @@ async function createTransaction(req, res){
     }
 
 
-    // 3. check account status --> (already validated inside withTransaction inside activeToAccount variable)
-
-    // if(fromUserAccount.status !== "ACTIVE" || toUserAccount.status !== "ACTIVE"){
-    //     return res.status(400).json({
-    //         message: "both fromAccount and toAccount must be ACTIVE to process transaction",
-    //     });    
-    }
+    // 3. account statuses are validated within the MongoDB transaction
     
     const session = await mongoose.startSession();
     let transaction;
@@ -167,6 +155,12 @@ async function createTransaction(req, res){
                 throw error;
             }
 
+            if(lockedFromAccount.currency !== activeToAccount.currency){
+                const error = new Error("source and destination account currencies must match");
+                error.statusCode = 400;
+                throw error;
+            }
+
 
             // 4. derive sender balance from ledger (using aggregation pipeline)
             const balance = await lockedFromAccount.getBalance(session);
@@ -196,9 +190,6 @@ async function createTransaction(req, res){
                 type: "DEBIT",
             }], { session });
         
-            // doing this to make a 10 second delay between the transaction processing from debit to credit and for testing what happens if we give another request from the same idempotencyKey
-            await new Promise(resolve => setTimeout(resolve, 10 * 1000));
-                
             // 7. credit ledger entry
         
             const creditLedgerEntry = await ledgerModel.create([{
@@ -237,7 +228,6 @@ async function createTransaction(req, res){
         message: "transaction completed successfully",
         transaction
     });
-
 };
 
 async function createInitialFundsTransaction(req, res){
