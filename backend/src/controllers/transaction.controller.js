@@ -25,11 +25,17 @@ async function createTransaction(req, res){
     
     // 1. validate request
     
-    const { fromAccount, toAccount, amount, idempotencyKey } = req.body;
+    const { fromAccount, toAccount, amount, idempotencyKey, description } = req.body;
 
     if(fromAccount == null || toAccount == null || amount == null || idempotencyKey == null){
         return res.status(400).json({
             message: "fromAccount, toAccount, amount and idempotencyKey are required"
+        });
+    }
+
+    if(description != null && (typeof description !== "string" || description.trim().length > 120)){
+        return res.status(400).json({
+            message: "description must contain atmost 120 characters"
         });
     }
 
@@ -178,6 +184,7 @@ async function createTransaction(req, res){
                 toAccount,
                 amount,
                 idempotencyKey: normalizedIdempotencyKey,
+                description: description?.trim() || "",
                 status: "PENDING"
             }], { session });
         
@@ -299,8 +306,92 @@ async function createInitialFundsTransaction(req, res){
 };
 
 
+async function getUserTransactions(req, res){
+    try {
+        const userAccounts = await accountModel
+            .find({ user: req.user._id })
+            .select("_id")
+            .lean();
+
+        const accountIds = userAccounts.map((account) => account._id);
+
+        const transactions = await transactionModel
+            .find({
+                $or: [
+                    { fromAccount: { $in: accountIds } },
+                    { toAccount: { $in: accountIds } }
+                ]
+            })
+            .select("_id fromAccount toAccount amount status createdAt")
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean();
+
+        return res.status(200).json({
+            transactions
+        });
+
+    } catch (error) {
+        console.error("transaction history error: ", error);
+
+        return res.status(500).json({
+            message: "unable to load transaction history"
+        });
+    }
+};
+
+
+async function getTransactionDetails(req, res){
+    try {
+        const { transactionId } = req.params;
+
+        if(!mongoose.Types.ObjectId.isValid(transactionId)){
+            return res.status(400).json({
+                message: "invalid transaction ID"
+            });
+        }
+
+        const userAccounts = await accountModel
+            .find({ user: req.user._id })
+            .select("_id")
+            .lean();
+
+        const accountIds = userAccounts.map((account) => account._id);
+
+        const transaction = await transactionModel
+            .findOne({
+                _id: transactionId,
+                $or: [
+                    { fromAccount: { $in: accountIds } },
+                    { toAccount: { $in: accountIds } }
+                ]
+            })
+            .select("_id fromAccount toAccount amount status description idempotencyKey createdAt")
+            .lean();
+
+        if(!transaction){
+            return res.status(404).json({
+                message: "transaction not found"
+            });
+        }
+
+        return res.status(200).json({
+            transaction
+        });
+
+    } catch (error) {
+        console.error("transaction details error: ", error);
+
+        return res.status(500).json({
+            message: "unable to load transaction details"
+        });
+    }
+};
+
 export default {
     createTransaction,
-    createInitialFundsTransaction
+    createInitialFundsTransaction,
+    getUserTransactions,
+    getTransactionDetails
 };
 

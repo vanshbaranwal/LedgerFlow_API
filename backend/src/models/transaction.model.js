@@ -35,6 +35,13 @@ const transactionSchema = new mongoose.Schema({
         required: [true, "idempotency key is required for creating a transaction"],
         index: true,
         unique: true
+    },
+
+    description: {
+        type: String,
+        trim: true,
+        maxLength: [120, "description cannot exceed 120 characters"],
+        default: ""
     }
 
 }, {
