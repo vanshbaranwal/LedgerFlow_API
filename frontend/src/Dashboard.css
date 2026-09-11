@@ -632,7 +632,7 @@
 .transaction-table-head,
 .transaction-row {
   display: grid;
-  grid-template-columns: 1fr 1.35fr 1fr .85fr 1.2fr;
+  grid-template-columns: .85fr 1.2fr .9fr .8fr 1.1fr auto;
   align-items: center;
   gap: 14px;
 }
@@ -659,22 +659,37 @@
   width: 100%;
   min-height: 67px;
   padding: 10px 15px;
-  border: 0;
   border-bottom: 1px solid rgba(255, 255, 255, .055);
   color: inherit;
   background: transparent;
   text-align: left;
-  cursor: pointer;
-  transition: background .18s ease;
 }
 
 .transaction-row:last-child { border-bottom: 0; }
-.transaction-row:hover { background: rgba(232, 223, 213, .035); }
-.transaction-row:focus-visible {
-  position: relative;
-  z-index: 1;
-  outline: 1px solid rgba(232, 223, 213, .55);
-  outline-offset: -2px;
+
+.transaction-details-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid rgba(232, 223, 213, .14);
+  border-radius: 6px;
+  color: var(--accent);
+  background: rgba(232, 223, 213, .04);
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.transaction-details-button:hover {
+  border-color: rgba(232, 223, 213, .32);
+  background: rgba(232, 223, 213, .09);
+}
+
+.transaction-details-button:focus-visible {
+  outline: 2px solid rgba(232, 223, 213, .55);
+  outline-offset: 2px;
 }
 
 .transaction-type {
@@ -858,7 +873,8 @@
   .transaction-amount { grid-column: 2; grid-row: 1; text-align: right; }
   .transaction-account { grid-column: 1; }
   .transaction-status { grid-column: 2; grid-row: 2; justify-self: end; }
-  .transaction-row time { grid-column: 1 / -1; padding-top: 9px; border-top: 1px solid rgba(255, 255, 255, .05); }
+  .transaction-row time { grid-column: 1; padding-top: 9px; border-top: 1px solid rgba(255, 255, 255, .05); }
+  .transaction-details-button { grid-column: 2; grid-row: 3; justify-self: end; margin-top: 9px; }
 }
 
 @media (max-width: 520px) {

@@ -490,17 +490,11 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
               ) : filteredTransactions.length ? (
                 <div className="transaction-table">
                   <div className="transaction-table-head" aria-hidden="true">
-                    <span>Type</span><span>Account</span><span>Amount</span><span>Status</span><span>Date</span>
+                    <span>Type</span><span>Account</span><span>Amount</span><span>Status</span><span>Date</span><span>Action</span>
                   </div>
                   <div className="transaction-table-body">
                     {filteredTransactions.map((transaction) => (
-                      <button
-                        className="transaction-row"
-                        type="button"
-                        key={transaction._id}
-                        onClick={() => setSelectedTransactionId(transaction._id)}
-                        aria-label={'View details for transaction ' + transaction._id}
-                      >
+                      <article className="transaction-row" key={transaction._id}>
                         <div className={'transaction-type ' + transaction.direction}>
                           <span><Icon name="send" /></span>
                           <strong>{transaction.direction === 'sent' ? 'Sent' : 'Received'}</strong>
@@ -518,7 +512,15 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
                         <time dateTime={transaction.createdAt} data-label="Date">
                           {formatTransactionDate(transaction.createdAt)}
                         </time>
-                      </button>
+                        <button
+                          className="transaction-details-button"
+                          type="button"
+                          onClick={() => setSelectedTransactionId(transaction._id)}
+                          aria-label={'View details for transaction ' + transaction._id}
+                        >
+                          View details <span aria-hidden="true">→</span>
+                        </button>
+                      </article>
                     ))}
                   </div>
                 </div>
