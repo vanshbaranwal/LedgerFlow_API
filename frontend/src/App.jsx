@@ -1,8 +1,19 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import './App.css'
+import Dashboard from './Dashboard.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+const USER_STORAGE_KEY = 'ledgerflow-user'
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem(USER_STORAGE_KEY))
+  } catch {
+    localStorage.removeItem(USER_STORAGE_KEY)
+    return null
+  }
+}
 
 const loginSchema = z.object({
   email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
@@ -154,10 +165,41 @@ function AuthModal({ type, onClose, onSuccess, onSwitch }) {
 function App() {
   const [modal, setModal] = useState(null)
   const [message, setMessage] = useState('')
+  const [user, setUser] = useState(getStoredUser)
 
-  const handleSuccess = (user, successMessage) => {
+  const handleSuccess = (authenticatedUser) => {
     setModal(null)
-    setMessage(`${successMessage} Welcome, ${user.name}.`)
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authenticatedUser))
+    setUser(authenticatedUser)
+    setMessage('')
+    window.history.replaceState({}, '', '/dashboard')
+  }
+
+  const leaveDashboard = (sessionExpired = false) => {
+    localStorage.removeItem(USER_STORAGE_KEY)
+    setUser(null)
+    setMessage(sessionExpired ? 'Your session expired. Please log in again.' : 'You have been logged out.')
+    window.history.replaceState({}, '', '/')
+  }
+
+  useEffect(() => {
+    if (user && window.location.pathname !== '/dashboard') {
+      window.history.replaceState({}, '', '/dashboard')
+    }
+
+    if (!user && window.location.pathname === '/dashboard') {
+      window.history.replaceState({}, '', '/')
+    }
+  }, [user])
+
+  if (user) {
+    return (
+      <Dashboard
+        user={user}
+        onLogout={() => leaveDashboard(false)}
+        onSessionExpired={() => leaveDashboard(true)}
+      />
+    )
   }
 
   return (
