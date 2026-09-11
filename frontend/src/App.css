@@ -110,3 +110,44 @@ footer .brand-logo { height: 40px; }
   footer { min-height: 90px; }
   .auth-modal { padding: 29px 21px; }
 }
+.session-loading {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 20px;
+  padding: 24px;
+  color: var(--text);
+  text-align: center;
+  background: radial-gradient(circle at 50% 45%, rgba(232, 223, 213, .07), transparent 24rem), #090b0a;
+}
+
+.session-loading .brand-logo {
+  width: auto;
+  height: 52px;
+}
+
+.session-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(232, 223, 213, .12);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: session-spin .8s linear infinite;
+}
+
+.session-loading strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.session-loading p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@keyframes session-spin {
+  to { transform: rotate(360deg); }
+}

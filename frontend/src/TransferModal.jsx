@@ -3,6 +3,16 @@ import { z } from 'zod'
 import './TransferModal.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+const completedTransferSteps = [
+  'Request validated',
+  'Account ownership verified',
+  'Balance checked',
+  'Database transaction started',
+  'Sender debited',
+  'Receiver credited',
+  'Ledger entries recorded',
+  'Transaction committed',
+]
 
 const transferSchema = z.object({
   toAccount: z
@@ -199,6 +209,23 @@ function TransferModal({ account, availableBalance, onClose, onSuccess, onSessio
               <div><dt>Status</dt><dd>{completedTransfer.status || 'COMPLETED'}</dd></div>
               {completedTransfer._id && <div><dt>Transaction</dt><dd>{maskAccountId(completedTransfer._id)}</dd></div>}
             </dl>
+
+            <section className="transfer-process" aria-labelledby="transfer-process-title">
+              <div className="transfer-process-heading">
+                <div>
+                  <p>Behind the transfer</p>
+                  <h3 id="transfer-process-title">How it worked</h3>
+                </div>
+                <span>{completedTransferSteps.length} checks passed</span>
+              </div>
+              <ol>
+                {completedTransferSteps.map((step) => (
+                  <li key={step}><span aria-hidden="true">✓</span>{step}</li>
+                ))}
+              </ol>
+              <p className="transfer-process-note">This summary explains the successful backend path without exposing tokens or private server data.</p>
+            </section>
+
             <button type="button" onClick={onClose}>Back to dashboard</button>
           </div>
         ) : (

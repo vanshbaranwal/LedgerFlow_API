@@ -24,6 +24,7 @@ const iconPaths = {
   logout: 'M10 5H5v14h5M14 8l4 4-4 4m4-4H9',
   plus: 'M12 5v14M5 12h14',
   shield: 'M12 3 5 6v5c0 4.6 2.9 8 7 10 4.1-2 7-5.4 7-10V6l-7-3Zm-3 9 2 2 4-5',
+  chevron: 'm8 10 4 4 4-4',
 }
 
 function Icon({ name }) {
@@ -68,6 +69,19 @@ function formatTransactionDate(value) {
   }).format(new Date(value))
 }
 
+function formatAccountCreationDate(value) {
+  if (!value) return 'Not available from the API'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Not available from the API'
+
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+}
+
 async function apiRequest(path, options = {}) {
   const response = await fetch(API_BASE_URL + path, {
     credentials: 'include',
@@ -96,6 +110,7 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
   const [isCreating, setIsCreating] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isTransferOpen, setIsTransferOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [selectedTransactionId, setSelectedTransactionId] = useState('')
   const [showFullAccountId, setShowFullAccountId] = useState(false)
   const [transactions, setTransactions] = useState([])
@@ -170,6 +185,17 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
     return () => controller.abort()
   }, [loadTransactions])
 
+  useEffect(() => {
+    if (!isProfileOpen) return undefined
+
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setIsProfileOpen(false)
+    }
+
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [isProfileOpen])
+
   const selectedAccount = useMemo(
     () => accounts.find((account) => account._id === selectedAccountId) || accounts[0],
     [accounts, selectedAccountId],
@@ -233,6 +259,7 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
   }
 
   const logout = async () => {
+    setIsProfileOpen(false)
     setIsLoggingOut(true)
     setError('')
 
@@ -275,12 +302,19 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
         </div>
 
         <div className="sidebar-profile">
-          <span className="profile-avatar">{getInitials(user.name)}</span>
-          <div>
-            <strong>{user.name}</strong>
-            <p>{user.email}</p>
-          </div>
-          <button type="button" onClick={logout} disabled={isLoggingOut} aria-label="Log out">
+          <button
+            className="sidebar-profile-open"
+            type="button"
+            onClick={() => setIsProfileOpen(true)}
+            aria-label="Open profile menu"
+          >
+            <span className="profile-avatar">{getInitials(user.name)}</span>
+            <span className="sidebar-profile-copy">
+              <strong>{user.name}</strong>
+              <small>{user.email}</small>
+            </span>
+          </button>
+          <button className="sidebar-logout" type="button" onClick={logout} disabled={isLoggingOut} aria-label="Log out">
             <Icon name="logout" />
           </button>
         </div>
@@ -288,15 +322,26 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
 
       <div className="dashboard-workspace">
         <header className="dashboard-topbar">
-          <div>
-            <p>Welcome back</p>
-            <strong>{user.name}</strong>
-          </div>
+          <div aria-hidden="true" />
           <div className="topbar-actions">
             <span className={'api-status ' + (error ? 'offline' : isLoading ? 'checking' : '')}>
               <i />{error ? 'API unavailable' : isLoading ? 'Checking API' : 'API connected'}
             </span>
-            <span className="topbar-avatar">{getInitials(user.name)}</span>
+            <button
+              className="topbar-profile-trigger"
+              type="button"
+              onClick={() => setIsProfileOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={isProfileOpen}
+            >
+              <span className="topbar-avatar">{getInitials(user.name)}</span>
+              <span className="topbar-profile-copy">
+                <strong>{user.name}</strong>
+                <small>View profile</small>
+              </span>
+              <Icon name="chevron" />
+              <span className="sr-only">Open profile menu</span>
+            </button>
           </div>
         </header>
 
@@ -555,6 +600,36 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
           onClose={() => setSelectedTransactionId('')}
           onSessionExpired={onSessionExpired}
         />
+      )}
+
+      {isProfileOpen && (
+        <div className="profile-menu-layer" onMouseDown={() => setIsProfileOpen(false)}>
+          <section
+            className="profile-menu-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-menu-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button className="profile-menu-close" type="button" onClick={() => setIsProfileOpen(false)} aria-label="Close profile menu">×</button>
+            <div className="profile-menu-heading">
+              <span>{getInitials(user.name)}</span>
+              <div>
+                <p>Your profile</p>
+                <h2 id="profile-menu-title">{user.name}</h2>
+              </div>
+            </div>
+            <dl>
+              <div><dt>Name</dt><dd>{user.name}</dd></div>
+              <div><dt>Email</dt><dd>{user.email}</dd></div>
+              <div><dt>Account created</dt><dd>{formatAccountCreationDate(user.createdAt)}</dd></div>
+            </dl>
+            <button className="profile-menu-logout" type="button" onClick={logout} disabled={isLoggingOut}>
+              <Icon name="logout" />
+              {isLoggingOut ? 'Logging out…' : 'Log out'}
+            </button>
+          </section>
+        </div>
       )}
     </div>
   )

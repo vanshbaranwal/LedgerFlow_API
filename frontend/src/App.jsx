@@ -4,16 +4,6 @@ import './App.css'
 import Dashboard from './Dashboard.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-const USER_STORAGE_KEY = 'ledgerflow-user'
-
-function getStoredUser() {
-  try {
-    return JSON.parse(localStorage.getItem(USER_STORAGE_KEY))
-  } catch {
-    localStorage.removeItem(USER_STORAGE_KEY)
-    return null
-  }
-}
 
 const loginSchema = z.object({
   email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
@@ -46,6 +36,19 @@ function LogoMark() {
 
 function BrandLogo() {
   return <img className="brand-logo" src="/ledgerflow-logo.png" alt="LedgerFlow API" />
+}
+
+function SessionLoadingScreen() {
+  return (
+    <main className="session-loading" aria-live="polite" aria-busy="true">
+      <BrandLogo />
+      <span className="session-spinner" aria-hidden="true" />
+      <div>
+        <strong>Checking your session</strong>
+        <p>Securely verifying your LedgerFlow account…</p>
+      </div>
+    </main>
+  )
 }
 
 function AuthModal({ type, onClose, onSuccess, onSwitch }) {
@@ -165,24 +168,55 @@ function AuthModal({ type, onClose, onSuccess, onSwitch }) {
 function App() {
   const [modal, setModal] = useState(null)
   const [message, setMessage] = useState('')
-  const [user, setUser] = useState(getStoredUser)
+  const [user, setUser] = useState(null)
+  const [isAuthChecking, setIsAuthChecking] = useState(true)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const verifySession = async () => {
+      try {
+        const response = await fetch(API_BASE_URL + '/auth/me', {
+          credentials: 'include',
+          signal: controller.signal,
+        })
+        const data = await response.json().catch(() => ({}))
+
+        if (response.ok && data.user) {
+          setUser(data.user)
+          return
+        }
+
+        setUser(null)
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        setUser(null)
+        setMessage('Your session could not be verified. Please log in to continue.')
+      } finally {
+        if (!controller.signal.aborted) setIsAuthChecking(false)
+      }
+    }
+
+    verifySession()
+    return () => controller.abort()
+  }, [])
 
   const handleSuccess = (authenticatedUser) => {
     setModal(null)
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authenticatedUser))
     setUser(authenticatedUser)
     setMessage('')
     window.history.replaceState({}, '', '/dashboard')
   }
 
   const leaveDashboard = (sessionExpired = false) => {
-    localStorage.removeItem(USER_STORAGE_KEY)
     setUser(null)
     setMessage(sessionExpired ? 'Your session expired. Please log in again.' : 'You have been logged out.')
     window.history.replaceState({}, '', '/')
   }
 
   useEffect(() => {
+    if (isAuthChecking) return
+
     if (user && window.location.pathname !== '/dashboard') {
       window.history.replaceState({}, '', '/dashboard')
     }
@@ -190,7 +224,11 @@ function App() {
     if (!user && window.location.pathname === '/dashboard') {
       window.history.replaceState({}, '', '/')
     }
-  }, [user])
+  }, [isAuthChecking, user])
+
+  if (isAuthChecking) {
+    return <SessionLoadingScreen />
+  }
 
   if (user) {
     return (

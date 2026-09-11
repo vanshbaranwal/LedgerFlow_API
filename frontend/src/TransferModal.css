@@ -342,10 +342,96 @@
 .transfer-success dd { margin: 0; color: #edf0ed; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 800; }
 .transfer-success > button { width: 100%; }
 
+.transfer-process {
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid rgba(232, 223, 213, .1);
+  border-radius: 10px;
+  background: rgba(232, 223, 213, .025);
+  text-align: left;
+}
+
+.transfer-process-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.transfer-process-heading p {
+  margin: 0 0 4px;
+  color: #8d938e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.transfer-process-heading h3 {
+  margin: 0;
+  color: #edf0ed;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.transfer-process-heading > span {
+  padding: 5px 7px;
+  border-radius: 20px;
+  color: #91bd92;
+  background: rgba(145, 189, 146, .08);
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.transfer-process ol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.transfer-process li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #c7ccc8;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.transfer-process li > span {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #0d110e;
+  background: #91bd92;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.transfer-process-note {
+  margin: 14px 0 0 !important;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  color: #7f8580 !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+}
+
 @media (max-width: 520px) {
   .transfer-overlay { align-items: end; padding: 0; }
   .transfer-modal { width: 100%; max-height: 94vh; padding: 27px 18px 20px; border-right: 0; border-bottom: 0; border-left: 0; border-radius: 18px 18px 0 0; }
   .transfer-heading h2 { font-size: 28px; }
   .transfer-source { grid-template-columns: 1fr; }
   .transfer-source div:last-child { text-align: left; }
+  .transfer-process ol { grid-template-columns: 1fr; }
 }
