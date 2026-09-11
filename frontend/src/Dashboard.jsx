@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './Dashboard.css'
 import TransferModal from './TransferModal.jsx'
+import TransactionDetailsPanel from './TransactionDetailsPanel.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 const transactionFilters = [
@@ -95,6 +96,7 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
   const [isCreating, setIsCreating] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isTransferOpen, setIsTransferOpen] = useState(false)
+  const [selectedTransactionId, setSelectedTransactionId] = useState('')
   const [showFullAccountId, setShowFullAccountId] = useState(false)
   const [transactions, setTransactions] = useState([])
   const [transactionFilter, setTransactionFilter] = useState('all')
@@ -492,7 +494,13 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
                   </div>
                   <div className="transaction-table-body">
                     {filteredTransactions.map((transaction) => (
-                      <article className="transaction-row" key={transaction._id}>
+                      <button
+                        className="transaction-row"
+                        type="button"
+                        key={transaction._id}
+                        onClick={() => setSelectedTransactionId(transaction._id)}
+                        aria-label={'View details for transaction ' + transaction._id}
+                      >
                         <div className={'transaction-type ' + transaction.direction}>
                           <span><Icon name="send" /></span>
                           <strong>{transaction.direction === 'sent' ? 'Sent' : 'Received'}</strong>
@@ -510,7 +518,7 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
                         <time dateTime={transaction.createdAt} data-label="Date">
                           {formatTransactionDate(transaction.createdAt)}
                         </time>
-                      </article>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -534,6 +542,15 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
           availableBalance={selectedBalance}
           onClose={() => setIsTransferOpen(false)}
           onSuccess={completeTransfer}
+          onSessionExpired={onSessionExpired}
+        />
+      )}
+
+      {selectedTransactionId && (
+        <TransactionDetailsPanel
+          transactionId={selectedTransactionId}
+          accountIds={accountIds}
+          onClose={() => setSelectedTransactionId('')}
           onSessionExpired={onSessionExpired}
         />
       )}

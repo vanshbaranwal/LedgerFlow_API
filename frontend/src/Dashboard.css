@@ -656,12 +656,26 @@
 }
 
 .transaction-row {
+  width: 100%;
   min-height: 67px;
   padding: 10px 15px;
+  border: 0;
   border-bottom: 1px solid rgba(255, 255, 255, .055);
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background .18s ease;
 }
 
 .transaction-row:last-child { border-bottom: 0; }
+.transaction-row:hover { background: rgba(232, 223, 213, .035); }
+.transaction-row:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 1px solid rgba(232, 223, 213, .55);
+  outline-offset: -2px;
+}
 
 .transaction-type {
   display: flex;

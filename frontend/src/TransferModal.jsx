@@ -16,6 +16,10 @@ const transferSchema = z.object({
     .min(1, 'Amount is required')
     .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, 'Enter an amount greater than zero')
     .transform(Number),
+  description: z
+    .string()
+    .trim()
+    .max(120, 'Description must be 120 characters or fewer'),
 })
 
 function formatMoney(amount, currency = 'INR') {
@@ -67,7 +71,7 @@ function friendlyTransferError(message = '') {
 }
 
 function TransferModal({ account, availableBalance, onClose, onSuccess, onSessionExpired }) {
-  const [form, setForm] = useState({ toAccount: '', amount: '' })
+  const [form, setForm] = useState({ toAccount: '', amount: '', description: '' })
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -132,6 +136,7 @@ function TransferModal({ account, availableBalance, onClose, onSuccess, onSessio
           fromAccount: account._id,
           toAccount: result.data.toAccount,
           amount: result.data.amount,
+          description: result.data.description,
           idempotencyKey: idempotencyKeyRef.current,
         }),
       })
@@ -247,6 +252,20 @@ function TransferModal({ account, availableBalance, onClose, onSuccess, onSessio
                   <small>{account.currency}</small>
                 </div>
                 {errors.amount && <span className="transfer-field-error">{errors.amount[0]}</span>}
+              </label>
+
+              <label>
+                <span className="transfer-label-row">Description <small>Optional</small></span>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={updateField}
+                  placeholder="What is this transfer for?"
+                  maxLength={120}
+                  disabled={isSubmitting}
+                />
+                <span className="description-count">{form.description.length}/120</span>
+                {errors.description && <span className="transfer-field-error">{errors.description[0]}</span>}
               </label>
 
               <div className="transfer-safety">
