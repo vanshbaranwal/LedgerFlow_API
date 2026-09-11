@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './Dashboard.css'
+import TransferModal from './TransferModal.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -74,6 +75,8 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isTransferOpen, setIsTransferOpen] = useState(false)
+  const [showFullAccountId, setShowFullAccountId] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -162,6 +165,11 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
       setError(requestError.message)
       setIsLoggingOut(false)
     }
+  }
+
+  const completeTransfer = async () => {
+    await loadAccounts()
+    setNotice('Transfer completed and your ledger balance has been refreshed.')
   }
 
   return (
@@ -310,7 +318,11 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
                 </div>
               </div>
               <div className="quick-actions">
-                <button type="button" onClick={() => setNotice('The transfer form is the next frontend feature we will connect.')}>
+                <button
+                  type="button"
+                  onClick={() => setIsTransferOpen(true)}
+                  disabled={!selectedAccount || selectedAccount.status !== 'ACTIVE'}
+                >
                   <span><Icon name="send" /></span>
                   <strong>Transfer funds</strong>
                   <small>Send through the API</small>
@@ -337,7 +349,20 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
                 <span className="card-icon"><Icon name="account" /></span>
               </div>
               <dl>
-                <div><dt>Account ID</dt><dd>{selectedAccount ? maskAccountId(selectedAccount._id) : '—'}</dd></div>
+                <div className="account-id-detail">
+                  <dt>Account ID</dt>
+                  <dd>
+                    <code>{selectedAccount ? (showFullAccountId ? selectedAccount._id : maskAccountId(selectedAccount._id)) : '—'}</code>
+                    <button
+                      type="button"
+                      onClick={() => setShowFullAccountId((current) => !current)}
+                      disabled={!selectedAccount}
+                      aria-pressed={showFullAccountId}
+                    >
+                      {showFullAccountId ? 'Hide ID' : 'View ID'}
+                    </button>
+                  </dd>
+                </div>
                 <div><dt>Currency</dt><dd>{selectedAccount?.currency || '—'}</dd></div>
                 <div><dt>Status</dt><dd>{selectedAccount?.status || '—'}</dd></div>
                 <div><dt>Balance source</dt><dd>Credit − debit entries</dd></div>
@@ -363,6 +388,16 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
           </section>
         </main>
       </div>
+
+      {isTransferOpen && selectedAccount && (
+        <TransferModal
+          account={selectedAccount}
+          availableBalance={selectedBalance}
+          onClose={() => setIsTransferOpen(false)}
+          onSuccess={completeTransfer}
+          onSessionExpired={onSessionExpired}
+        />
+      )}
     </div>
   )
 }
