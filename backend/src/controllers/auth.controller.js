@@ -30,7 +30,8 @@ async function userRegisterController(req, res){
         user:{
             _id: user._id,
             email: user.email,
-            name: user.name
+            name: user.name,
+            createdAt: user.createdAt
         },
         token
     });
@@ -66,9 +67,21 @@ async function userLoginController(req, res){
         user: {
             _id: user._id,
             email: user.email,
-            name: user.name
+            name: user.name,
+            createdAt: user.createdAt
         },
         token
+    });
+};
+
+async function getCurrentUserController(req, res){
+    return res.status(200).json({
+        user: {
+            _id: req.user._id,
+            email: req.user.email,
+            name: req.user.name,
+            createdAt: req.user.createdAt
+        }
     });
 };
 
@@ -99,5 +112,6 @@ async function userLogoutController(req, res){
 export default {
     userRegisterController,
     userLoginController,
+    getCurrentUserController,
     userLogoutController
 };
