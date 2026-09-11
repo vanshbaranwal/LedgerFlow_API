@@ -14,13 +14,27 @@ const registerSchema = loginSchema.extend({
 })
 
 const features = [
-  ['Accurate balances', 'Balances are calculated from debit and credit ledger entries.'],
-  ['Safe transfers', 'MongoDB transactions prevent partially completed transfers.'],
-  ['Duplicate protection', 'Idempotency keys prevent the same payment from running twice.'],
+  ['JWT authentication', 'Registration, login and logout with hashed passwords, protected routes and token blacklisting.'],
+  ['Account ownership', 'Users can create and view accounts, while ownership checks protect private balances and outgoing funds.'],
+  ['Ledger-derived balances', 'Balances are calculated from credit and debit entries instead of an editable stored number.'],
+  ['Double-entry records', 'Every transfer creates matching debit and credit entries linked to one transaction.'],
+  ['Atomic transfer safety', 'MongoDB transactions and source-account locking protect transfers from partial writes and concurrent overspending.'],
+  ['Idempotent payments', 'Unique idempotency keys make retries safe and prevent duplicate payment processing.'],
 ]
 
-function Logo() {
+const transferSteps = [
+  ['Authenticate', 'Verify the JWT and source-account ownership.'],
+  ['Validate', 'Check account status, currency and available funds.'],
+  ['Record', 'Create the transaction plus debit and credit entries atomically.'],
+  ['Confirm', 'Commit the transfer and send an email notification.'],
+]
+
+function LogoMark() {
   return <span className="logo-mark" aria-hidden="true">LF</span>
+}
+
+function BrandLogo() {
+  return <img className="brand-logo" src="/ledgerflow-logo.png" alt="LedgerFlow API" />
 }
 
 function AuthModal({ type, onClose, onSuccess, onSwitch }) {
@@ -94,7 +108,7 @@ function AuthModal({ type, onClose, onSuccess, onSwitch }) {
     <div className="modal-overlay" onMouseDown={onClose}>
       <div className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(event) => event.stopPropagation()}>
         <button className="close-button" type="button" onClick={onClose} aria-label="Close">×</button>
-        <div className="modal-logo"><Logo /> LedgerFlow</div>
+        <div className="modal-logo"><LogoMark /> LedgerFlow</div>
         <h2 id="modal-title">{isRegister ? 'Create your account' : 'Welcome back'}</h2>
         <p className="modal-description">{isRegister ? 'Enter your details to get started.' : 'Enter your details to continue.'}</p>
 
@@ -149,8 +163,8 @@ function App() {
   return (
     <div className="page">
       <header>
-        <a className="logo" href="#top"><Logo /><span>LedgerFlow</span></a>
-        <nav aria-label="Main navigation"><a href="#about">About</a><a href="#features">Features</a></nav>
+        <a className="logo" href="#top"><BrandLogo /></a>
+        <nav aria-label="Main navigation"><a href="#about">About</a><a href="#features">Features</a><a href="#flow">Flow</a></nav>
         <div className="auth-buttons">
           <button className="login-button" type="button" onClick={() => setModal('login')}>Log in</button>
           <button className="register-button" type="button" onClick={() => setModal('register')}>Register</button>
@@ -170,14 +184,39 @@ function App() {
           </div>
         </section>
 
-        <section className="features" id="features">
-          {features.map(([title, description], index) => (
-            <article key={title}><span>0{index + 1}</span><h2>{title}</h2><p>{description}</p></article>
-          ))}
+        <section className="showcase" id="features">
+          <div className="section-heading">
+            <p className="eyebrow">Inside the backend</p>
+            <h2>More than a basic CRUD API.</h2>
+            <p>LedgerFlow is designed around traceable records, authorization and reliable money movement.</p>
+          </div>
+
+          <div className="features">
+            {features.map(([title, description], index) => (
+              <article key={title}><span>0{index + 1}</span><h3>{title}</h3><p>{description}</p></article>
+            ))}
+          </div>
+        </section>
+
+        <section className="transfer-flow" id="flow">
+          <div className="section-heading compact-heading">
+            <p className="eyebrow">Transaction flow</p>
+            <h2>One request, four deliberate steps.</h2>
+          </div>
+
+          <ol>
+            {transferSteps.map(([title, description], index) => (
+              <li key={title}><span>{index + 1}</span><div><h3>{title}</h3><p>{description}</p></div></li>
+            ))}
+          </ol>
+
+          <div className="tech-stack" aria-label="Technology stack">
+            <span>Node.js</span><span>Express</span><span>MongoDB</span><span>Mongoose</span><span>JWT</span><span>OAuth2 Email</span>
+          </div>
         </section>
       </main>
 
-      <footer><a className="logo" href="#top"><Logo /><span>LedgerFlow</span></a><p>Built by Vansh Baranwal</p></footer>
+      <footer><a className="logo" href="#top"><BrandLogo /></a><p>Built by Vansh Baranwal</p></footer>
 
       {modal && <AuthModal key={modal} type={modal} onClose={() => setModal(null)} onSwitch={setModal} onSuccess={handleSuccess} />}
     </div>
