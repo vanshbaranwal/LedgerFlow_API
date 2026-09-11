@@ -3,6 +3,13 @@ import './Dashboard.css'
 import TransferModal from './TransferModal.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+const transactionFilters = [
+  ['all', 'All'],
+  ['sent', 'Money sent'],
+  ['received', 'Money received'],
+  ['completed', 'Completed'],
+  ['failed', 'Failed'],
+]
 
 const iconPaths = {
   overview: 'M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z',
@@ -48,6 +55,18 @@ function getInitials(name = '') {
     .toUpperCase() || 'LF'
 }
 
+function formatTransactionDate(value) {
+  if (!value) return 'Date unavailable'
+
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
 async function apiRequest(path, options = {}) {
   const response = await fetch(API_BASE_URL + path, {
     credentials: 'include',
@@ -77,6 +96,10 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isTransferOpen, setIsTransferOpen] = useState(false)
   const [showFullAccountId, setShowFullAccountId] = useState(false)
+  const [transactions, setTransactions] = useState([])
+  const [transactionFilter, setTransactionFilter] = useState('all')
+  const [isTransactionsLoading, setIsTransactionsLoading] = useState(true)
+  const [transactionError, setTransactionError] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -110,6 +133,25 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
     }
   }, [onSessionExpired])
 
+  const loadTransactions = useCallback(async (signal) => {
+    setIsTransactionsLoading(true)
+    setTransactionError('')
+
+    try {
+      const data = await apiRequest('/transactions', { signal })
+      setTransactions(Array.isArray(data.transactions) ? data.transactions : [])
+    } catch (requestError) {
+      if (requestError.name === 'AbortError') return
+      if (requestError.status === 401) {
+        onSessionExpired()
+        return
+      }
+      setTransactionError(requestError.message)
+    } finally {
+      if (!signal?.aborted) setIsTransactionsLoading(false)
+    }
+  }, [onSessionExpired])
+
   useEffect(() => {
     const controller = new AbortController()
     // Loading protected API data is the external synchronization this effect owns.
@@ -118,6 +160,14 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
     return () => controller.abort()
   }, [loadAccounts])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    // Loading protected API data is the external synchronization this effect owns.
+    // oxlint-disable-next-line react/set-state-in-effect
+    loadTransactions(controller.signal)
+    return () => controller.abort()
+  }, [loadTransactions])
+
   const selectedAccount = useMemo(
     () => accounts.find((account) => account._id === selectedAccountId) || accounts[0],
     [accounts, selectedAccountId],
@@ -125,6 +175,32 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
 
   const selectedBalance = selectedAccount ? balances[selectedAccount._id] ?? 0 : 0
   const firstName = user.name?.trim().split(/\s+/)[0] || 'there'
+  const accountIds = useMemo(
+    () => new Set(accounts.map((account) => account._id)),
+    [accounts],
+  )
+  const displayTransactions = useMemo(() => (
+    transactions.map((transaction) => {
+      const fromAccount = String(transaction.fromAccount)
+      const toAccount = String(transaction.toAccount)
+      const direction = accountIds.has(fromAccount) ? 'sent' : 'received'
+
+      return {
+        ...transaction,
+        direction,
+        counterpartyAccount: direction === 'sent' ? toAccount : fromAccount,
+      }
+    })
+  ), [accountIds, transactions])
+  const filteredTransactions = useMemo(() => {
+    if (transactionFilter === 'all') return displayTransactions
+    if (transactionFilter === 'sent' || transactionFilter === 'received') {
+      return displayTransactions.filter((transaction) => transaction.direction === transactionFilter)
+    }
+    return displayTransactions.filter(
+      (transaction) => transaction.status?.toLowerCase() === transactionFilter,
+    )
+  }, [displayTransactions, transactionFilter])
 
   const createAccount = async () => {
     setIsCreating(true)
@@ -168,7 +244,7 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
   }
 
   const completeTransfer = async () => {
-    await loadAccounts()
+    await Promise.all([loadAccounts(), loadTransactions()])
     setNotice('Transfer completed and your ledger balance has been refreshed.')
   }
 
@@ -182,7 +258,9 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
         <nav className="dashboard-nav" aria-label="Dashboard navigation">
           <p>Workspace</p>
           <button className="active" type="button"><Icon name="overview" />Overview</button>
-          <button type="button" disabled><Icon name="transaction" />Transactions<span>Next</span></button>
+          <button type="button" onClick={() => document.querySelector('#transaction-history')?.scrollIntoView({ behavior: 'smooth' })}>
+            <Icon name="transaction" />Transactions
+          </button>
           <button type="button" disabled><Icon name="ledger" />Ledger flow<span>Next</span></button>
         </nav>
 
@@ -369,21 +447,82 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
               </dl>
             </article>
 
-            <article className="dashboard-card recent-card">
+            <article className="dashboard-card recent-card" id="transaction-history">
               <div className="card-title-row">
                 <div>
-                  <p className="card-kicker">Recent activity</p>
-                  <span>Your latest money movements</span>
+                  <p className="card-kicker">Transaction history</p>
+                  <span>Your 50 most recent money movements</span>
                 </div>
-                <button type="button" disabled>View all</button>
+                <button className="history-refresh" type="button" onClick={() => loadTransactions()} disabled={isTransactionsLoading}>
+                  <Icon name="refresh" />Refresh
+                </button>
               </div>
-              <div className="empty-activity">
-                <span><Icon name="transaction" /></span>
-                <div>
-                  <strong>No activity to show yet</strong>
-                  <p>Completed transfers will appear here when transaction history is connected.</p>
+
+              <div className="transaction-filters" aria-label="Filter transactions">
+                {transactionFilters.map(([value, label]) => (
+                  <button
+                    className={transactionFilter === value ? 'active' : ''}
+                    type="button"
+                    key={value}
+                    onClick={() => setTransactionFilter(value)}
+                    aria-pressed={transactionFilter === value}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {isTransactionsLoading ? (
+                <div className="history-loading" aria-label="Loading transaction history">
+                  <span /><span /><span />
                 </div>
-              </div>
+              ) : transactionError ? (
+                <div className="history-state error" role="alert">
+                  <span><Icon name="transaction" /></span>
+                  <div>
+                    <strong>History could not be loaded</strong>
+                    <p>{transactionError}</p>
+                  </div>
+                  <button type="button" onClick={() => loadTransactions()}>Try again</button>
+                </div>
+              ) : filteredTransactions.length ? (
+                <div className="transaction-table">
+                  <div className="transaction-table-head" aria-hidden="true">
+                    <span>Type</span><span>Account</span><span>Amount</span><span>Status</span><span>Date</span>
+                  </div>
+                  <div className="transaction-table-body">
+                    {filteredTransactions.map((transaction) => (
+                      <article className="transaction-row" key={transaction._id}>
+                        <div className={'transaction-type ' + transaction.direction}>
+                          <span><Icon name="send" /></span>
+                          <strong>{transaction.direction === 'sent' ? 'Sent' : 'Received'}</strong>
+                        </div>
+                        <div className="transaction-account" data-label="Account">
+                          <span>{transaction.direction === 'sent' ? 'To' : 'From'}</span>
+                          <strong>{maskAccountId(transaction.counterpartyAccount)}</strong>
+                        </div>
+                        <strong className={'transaction-amount ' + transaction.direction} data-label="Amount">
+                          {transaction.direction === 'sent' ? '−' : '+'}{formatMoney(transaction.amount, 'INR')}
+                        </strong>
+                        <span className={'transaction-status ' + transaction.status?.toLowerCase()} data-label="Status">
+                          {transaction.status || 'UNKNOWN'}
+                        </span>
+                        <time dateTime={transaction.createdAt} data-label="Date">
+                          {formatTransactionDate(transaction.createdAt)}
+                        </time>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="history-state">
+                  <span><Icon name="transaction" /></span>
+                  <div>
+                    <strong>{transactions.length ? 'No matching transactions' : 'No transactions yet'}</strong>
+                    <p>{transactions.length ? 'Choose a different filter to see more activity.' : 'Your completed transfers will appear here automatically.'}</p>
+                  </div>
+                </div>
+              )}
             </article>
           </section>
         </main>
