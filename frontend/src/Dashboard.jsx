@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import './Dashboard.css'
 import TransferModal from './TransferModal.jsx'
 import TransactionDetailsPanel from './TransactionDetailsPanel.jsx'
+import LedgerFlow from './LedgerFlow.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 const transactionFilters = [
@@ -114,6 +115,10 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
   const [selectedTransactionId, setSelectedTransactionId] = useState('')
   const [showFullAccountId, setShowFullAccountId] = useState(false)
   const [transactions, setTransactions] = useState([])
+  const [ledgerFlows, setLedgerFlows] = useState([])
+  const [isLedgerLoading, setIsLedgerLoading] = useState(true)
+  const [ledgerError, setLedgerError] = useState('')
+  const [activeSection, setActiveSection] = useState('overview')
   const [transactionFilter, setTransactionFilter] = useState('all')
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(true)
   const [transactionError, setTransactionError] = useState('')
@@ -169,6 +174,25 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
     }
   }, [onSessionExpired])
 
+  const loadLedgerFlow = useCallback(async (signal) => {
+    setIsLedgerLoading(true)
+    setLedgerError('')
+
+    try {
+      const data = await apiRequest('/ledger', { signal })
+      setLedgerFlows(Array.isArray(data.ledgerFlow) ? data.ledgerFlow : [])
+    } catch (requestError) {
+      if (requestError.name === 'AbortError') return
+      if (requestError.status === 401) {
+        onSessionExpired()
+        return
+      }
+      setLedgerError(requestError.message)
+    } finally {
+      if (!signal?.aborted) setIsLedgerLoading(false)
+    }
+  }, [onSessionExpired])
+
   useEffect(() => {
     const controller = new AbortController()
     // Loading protected API data is the external synchronization this effect owns.
@@ -184,6 +208,14 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
     loadTransactions(controller.signal)
     return () => controller.abort()
   }, [loadTransactions])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    // Loading protected API data is the external synchronization this effect owns.
+    // oxlint-disable-next-line react/set-state-in-effect
+    loadLedgerFlow(controller.signal)
+    return () => controller.abort()
+  }, [loadLedgerFlow])
 
   useEffect(() => {
     if (!isProfileOpen) return undefined
@@ -273,8 +305,13 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
   }
 
   const completeTransfer = async () => {
-    await Promise.all([loadAccounts(), loadTransactions()])
+    await Promise.all([loadAccounts(), loadTransactions(), loadLedgerFlow()])
     setNotice('Transfer completed and your ledger balance has been refreshed.')
+  }
+
+  const goToSection = (section, elementId) => {
+    setActiveSection(section)
+    document.querySelector(elementId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   return (
@@ -286,11 +323,15 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
 
         <nav className="dashboard-nav" aria-label="Dashboard navigation">
           <p>Workspace</p>
-          <button className="active" type="button"><Icon name="overview" />Overview</button>
-          <button type="button" onClick={() => document.querySelector('#transaction-history')?.scrollIntoView({ behavior: 'smooth' })}>
+          <button className={activeSection === 'overview' ? 'active' : ''} type="button" onClick={() => goToSection('overview', '.dashboard-heading')}>
+            <Icon name="overview" />Overview
+          </button>
+          <button className={activeSection === 'transactions' ? 'active' : ''} type="button" onClick={() => goToSection('transactions', '#transaction-history')}>
             <Icon name="transaction" />Transactions
           </button>
-          <button type="button" disabled><Icon name="ledger" />Ledger flow<span>Next</span></button>
+          <button className={activeSection === 'ledger' ? 'active' : ''} type="button" onClick={() => goToSection('ledger', '#ledger-flow')}>
+            <Icon name="ledger" />Ledger flow<span>Live</span>
+          </button>
         </nav>
 
         <div className="sidebar-security">
@@ -579,6 +620,15 @@ function Dashboard({ user, onLogout, onSessionExpired }) {
                 </div>
               )}
             </article>
+
+            <LedgerFlow
+              flows={ledgerFlows}
+              isLoading={isLedgerLoading}
+              error={ledgerError}
+              accountIds={accountIds}
+              onRetry={() => loadLedgerFlow()}
+              onViewTransaction={setSelectedTransactionId}
+            />
           </section>
         </main>
       </div>
