@@ -15,12 +15,15 @@ const registerSchema = loginSchema.extend({
 })
 
 const features = [
-  ['JWT authentication', 'Registration, login and logout with hashed passwords, protected routes and token blacklisting.'],
+  ['Protected sessions', 'Registration, login and logout with hashed passwords, JWT cookies, token blacklisting and backend-verified sessions.'],
   ['Account ownership', 'Users can create and view accounts, while ownership checks protect private balances and outgoing funds.'],
   ['Ledger-derived balances', 'Balances are calculated from credit and debit entries instead of an editable stored number.'],
   ['Double-entry records', 'Every transfer creates matching debit and credit entries linked to one transaction.'],
   ['Atomic transfer safety', 'MongoDB transactions and source-account locking protect transfers from partial writes and concurrent overspending.'],
   ['Idempotent payments', 'Unique idempotency keys make retries safe and prevent duplicate payment processing.'],
+  ['Authenticated dashboard', 'A protected workspace shows account balances, status, profile information and secure logout controls.'],
+  ['Transaction explorer', 'Filter recent activity, inspect individual transfers and safely copy transaction references and account IDs.'],
+  ['Live ledger explorer', 'Follow the real debit-to-credit path and verify that both immutable entries balance for every transfer.'],
 ]
 
 const transferSteps = [
@@ -257,7 +260,7 @@ function App() {
         <section className="hero" id="about">
           <p className="eyebrow">A ledger-backed transaction API</p>
           <h1>Move money with<br /><span>clarity and confidence.</span></h1>
-          <p className="hero-copy">LedgerFlow records every debit and credit, validates each transfer, and keeps account balances consistent—even when multiple payments happen at the same time.</p>
+          <p className="hero-copy">Create accounts, move simulated funds and inspect every transaction from request to balanced ledger entries—all through a protected full-stack banking workspace.</p>
           <div className="hero-buttons">
             <button className="register-button large" type="button" onClick={() => setModal('register')}>Create an account</button>
             <button className="login-button large" type="button" onClick={() => setModal('login')}>Log in</button>
@@ -267,9 +270,9 @@ function App() {
 
         <section className="showcase" id="features">
           <div className="section-heading">
-            <p className="eyebrow">Inside the backend</p>
-            <h2>More than a basic CRUD API.</h2>
-            <p>LedgerFlow is designed around traceable records, authorization and reliable money movement.</p>
+            <p className="eyebrow">Full-stack showcase</p>
+            <h2>A banking flow you can inspect end to end.</h2>
+            <p>LedgerFlow combines a secure transaction API with an interactive dashboard that makes its authorization, reliability and accounting decisions visible.</p>
           </div>
 
           <div className="features">
@@ -292,7 +295,7 @@ function App() {
           </ol>
 
           <div className="tech-stack" aria-label="Technology stack">
-            <span>Node.js</span><span>Express</span><span>MongoDB</span><span>Mongoose</span><span>JWT</span><span>OAuth2 Email</span>
+            <span>React</span><span>Vite</span><span>Zod</span><span>Node.js</span><span>Express</span><span>MongoDB</span><span>Mongoose</span><span>JWT</span><span>OAuth2 Email</span>
           </div>
         </section>
       </main>
